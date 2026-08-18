@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weibo Insight Console</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/static/wordcloud2.min.js"></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Weibo Workflow Console</p>
+        <h1>微博舆情一键分析</h1>
+        <p class="hero-text">
+          一站式微博数据抓取、清洗与情感分析，
+          让数据洞察更简单。
+        </p>
+      </div>
+      <div class="hero-stats" id="heroStats">
+        <div class="stat-card">
+          <span class="stat-label">原始文件</span>
+          <strong class="stat-value" id="rawCount">0</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">清洗文件</span>
+          <strong class="stat-value" id="cleanedCount">0</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">分析结果</span>
+          <strong class="stat-value" id="resultCount">0</strong>
+        </div>
+      </div>
+    </header>
+
+    <main class="dashboard-grid">
+      <div class="two-col-row">
+        <section class="panel panel-accent">
+          <div class="panel-head">
+            <h2>评论情感分析</h2>
+            <p>输入微博链接，自动抓取评论、清洗数据并分析情感倾向。</p>
+          </div>
+          <form id="fullCommentForm" class="stack-form">
+            <label>
+              <span>微博 ID / 短链 ID</span>
+              <textarea id="fullTweetIds" rows="5" placeholder="每行一个，支持微博链接或纯 ID，如 OM4rNu3S3"></textarea>
+            </label>
+            <div class="inline-fields">
+              <label>
+                <span>每页评论数</span>
+                <input id="fullCount" type="number" min="1" value="20">
+              </label>
+              <label>
+                <span>批量推理大小</span>
+                <input id="fullBatchSize" type="number" min="1" value="32">
+              </label>
+            </div>
+            <label>
+              <span>情感模型</span>
+              <select id="fullModelSelect">
+                <option value="">自定义目录</option>
+                <option value="bert-wwm">Chinese-BERT-wwm (默认)</option>
+                <option value="roberta">Chinese-RoBERTa-wwm</option>
+                <option value="seqgpt">SeqGPT-560M (生成式)</option>
+              </select>
+            </label>
+            <label>
+              <span>模型目录（自定义）</span>
+              <input id="fullModelDir" type="text" placeholder="选填，下拉选择预设模型后此项忽略">
+            </label>
+            <button type="submit" class="button button-primary">开始一键分析</button>
+          </form>
+        </section>
+
+        <section class="panel panel-accent">
+          <div class="panel-head">
+            <h2>关键词微博情感分析</h2>
+            <p>输入关键词，一站式完成微博抓取、清洗与情感分析。</p>
+          </div>
+          <form id="fullKeywordForm" class="stack-form">
+            <label>
+              <span>关键词</span>
+              <input id="keywordInput" type="text" placeholder="输入要搜索的关键词" required>
+            </label>
+            <div class="inline-fields">
+              <label>
+                <span>开始时间</span>
+                <input id="keywordStartTime" type="text" placeholder="2026-01-01 00:00">
+              </label>
+              <label>
+                <span>结束时间</span>
+                <input id="keywordEndTime" type="text" placeholder="2026-01-03 23:00">
+              </label>
+            </div>
+            <div class="inline-fields">
+              <label>
+                <span>批量推理大小</span>
+                <input id="keywordBatchSize" type="number" min="1" value="32">
+              </label>
+              <label>
+                <span>每类示例数</span>
+                <input id="keywordTopExamples" type="number" min="1" value="5">
+              </label>
+            </div>
+            <label class="checkbox-row">
+              <input id="keywordSplitByHour" type="checkbox" checked>
+              <span>按小时切分时间窗口</span>
+            </label>
+            <label>
+              <span>情感模型</span>
+              <select id="keywordModelSelect">
+                <option value="">自定义目录</option>
+                <option value="bert-wwm">Chinese-BERT-wwm (默认)</option>
+                <option value="roberta">Chinese-RoBERTa-wwm</option>
+                <option value="seqgpt">SeqGPT-560M (生成式)</option>
+              </select>
+            </label>
+            <label>
+              <span>模型目录（自定义）</span>
+              <input id="keywordModelDir" type="text" placeholder="选填，下拉选择预设模型后此项忽略">
+            </label>
+            <button type="submit" class="button button-primary">开始一键分析</button>
+          </form>
+        </section>
+      </div>
+      
+      <div class="two-col-row">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>独立抓取</h2>
+          <p>自由选择抓取模式，评论、用户信息或关键词微博，各取所需。</p>
+        </div>
+        <form id="crawlForm" class="stack-form">
+          <label>
+            <span>抓取模式</span>
+            <select id="crawlMode">
+              <option value="comment">评论抓取</option>
+              <option value="user">用户信息抓取</option>
+              <option value="tweet_by_keyword">关键词微博抓取</option>
+            </select>
+          </label>
+
+          <div id="commentFields" class="mode-fields">
+            <label>
+              <span>微博 ID / 短链 ID</span>
+              <textarea id="crawlTweetIds" rows="4" placeholder="每行一个，支持链接或纯 ID"></textarea>
+            </label>
+            <label>
+              <span>每页评论数</span>
+              <input id="crawlCount" type="number" min="1" value="20">
+            </label>
+          </div>
+
+          <div id="userFields" class="mode-fields hidden">
+            <label>
+              <span>用户 ID</span>
+              <textarea id="crawlUserIds" rows="4" placeholder="每行一个"></textarea>
+            </label>
+          </div>
+
+          <div id="keywordFields" class="mode-fields hidden">
+            <label>
+              <span>关键词</span>
+              <textarea id="crawlKeywords" rows="4" placeholder="每行一个"></textarea>
+            </label>
+            <div class="inline-fields">
+              <label>
+                <span>开始时间</span>
+                <input id="crawlStartTime" type="text" placeholder="2026-01-01 00:00">
+              </label>
+              <label>
+                <span>结束时间</span>
+                <input id="crawlEndTime" type="text" placeholder="2026-01-03 23:00">
+              </label>
+            </div>
+            <label class="checkbox-row">
+              <input id="crawlSplitByHour" type="checkbox" checked>
+              <span>按小时切分时间窗口</span>
+            </label>
+          </div>
+
+          <button type="submit" class="button">开始抓取</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>数据处理</h2>
+          <p>已有数据？直接选文件进行清洗或情感分析。</p>
+        </div>
+        <form id="cleanForm" class="stack-form">
+          <label>
+            <span>选择原始评论文件</span>
+            <select id="rawFileSelect"></select>
+          </label>
+          <button type="submit" class="button">清洗所选文件</button>
+        </form>
+
+        <div class="divider"></div>
+
+        <form id="analyzeForm" class="stack-form">
+          <label>
+            <span>选择清洗结果文件</span>
+            <select id="cleanedFileSelect"></select>
+          </label>
+          <label>
+            <span>情感模型</span>
+            <select id="analyzeModelSelect">
+              <option value="" selected>自定义目录</option>
+              <option value="bert-wwm">Chinese-BERT-wwm</option>
+              <option value="roberta">Chinese-RoBERTa-wwm</option>
+              <option value="seqgpt">SeqGPT-560M (生成式)</option>
+            </select>
+          </label>
+          <div class="inline-fields">
+            <label>
+              <span>批量推理大小</span>
+              <input id="analyzeBatchSize" type="number" min="1" value="32">
+            </label>
+            <label>
+              <span>每类示例数</span>
+              <input id="topExamplesPerLabel" type="number" min="1" value="5">
+            </label>
+          </div>
+          <label>
+            <span>模型目录（自定义）</span>
+            <input id="analyzeModelDir" type="text" placeholder="默认使用 weibospider/models/final">
+          </label>
+          <button type="submit" class="button">分析总体倾向</button>
+        </form>
+      </section>
+      </div>
+
+      <section class="panel panel-wide">
+        <div class="panel-head">
+          <h2>任务监控</h2>
+          <p>后台任务实时追踪，状态和日志一目了然。</p>
+        </div>
+        <div class="job-strip">
+          <div class="job-chip" id="jobStatusChip">空闲</div>
+          <div class="job-meta" id="jobMeta">尚未启动任务</div>
+        </div>
+        <pre class="log-view" id="jobLogs">等待任务启动…</pre>
+      </section>
+
+      <section class="panel panel-wide">
+        <div class="panel-head">
+          <h2>总体倾向</h2>
+          <p>分析完成后自动展示情感分布、关键指标与代表性评论。</p>
+        </div>
+        <div id="analysisSummary" class="summary-placeholder">
+          运行“开始一键分析”或“分析总体倾向”后，这里会出现结果。如果你看到这行字，说明还没有分析结果哦~
+        </div>
+      </section>
+
+      <section class="panel panel-wide">
+        <div class="panel-head">
+          <h2>最近文件</h2>
+          <p>快速浏览最近抓取的数据和分析结果，一键定位。</p>
+        </div>
+        <div class="recent-files-grid">
+          <div>
+            <h3>原始数据</h3>
+            <ul id="rawFilesList" class="file-list"></ul>
+          </div>
+          <div>
+            <h3>清洗结果</h3>
+            <ul id="cleanedFilesList" class="file-list"></ul>
+          </div>
+          <div>
+            <h3>分析输出</h3>
+            <ul id="resultFilesList" class="file-list"></ul>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

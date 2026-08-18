@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Secrets / credentials (never commit the real login cookie)
+weibospider/config/cookie.txt
+
+# Data
+weibospider/data/
+weibospider/reports/
+weibospider/runtime_outputs/
+
+# Models & checkpoints (large binary weights)
+weibospider/models/
+*.msgpack
+*.h5
+*.ckpt
+*.pb
+*.safetensors
+*.pt
+*.pth
+*.onnx
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
